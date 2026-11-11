@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111f"><title>SINAL FM — Scanner de Tendência</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#101d2e;--line:#263b53;--muted:#9aabc0;--green:#20d69a;--red:#ff6474;--gold:#f4c76a}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(155deg,#0b1727,#060b13);font:15px system-ui,Arial;color:#f4f7fb}
+header{padding:20px 16px 14px;max-width:760px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.logo{font-size:25px;font-weight:900;letter-spacing:1.4px}.logo span{color:var(--green)}
+.pill{border:1px solid #38506b;border-radius:30px;padding:6px 9px;color:var(--muted);font-size:11px;white-space:nowrap}
+main{padding:0 13px 28px;max-width:760px;margin:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;margin:12px 0}
+.notice{font-size:12px;line-height:1.5;color:#d2deec;background:#18253a;border:1px solid #354963;border-radius:13px;padding:12px}
+h2{font-size:17px;margin:2px 0 12px}.small{font-size:12px;color:var(--muted)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+button,select{font:inherit;border-radius:10px;border:1px solid #344b66;background:#0b1727;color:white;padding:11px}
+button.primary{width:100%;border:0;background:var(--green);color:#052218;font-weight:850;margin-top:12px}
+button.secondary{background:#17263a}
+button:disabled{opacity:.55}
+.pairs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+label.pair{display:flex;align-items:center;gap:8px;background:#0b1727;padding:10px;border:1px solid #263b53;border-radius:10px;font-size:13px}
+input{accent-color:var(--green)}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.tile{background:#0b1727;border-radius:11px;padding:10px;text-align:center}.tile b{display:block;font-size:19px;margin-top:3px}
+.results{display:flex;flex-direction:column;gap:9px}
+.result{background:#0b1727;border:1px solid #263b53;border-radius:12px;padding:12px}
+.result.buy{border-color:#1b6b57}.result.sell{border-color:#7a3547}
+.direction{font-weight:900;font-size:17px}.buy .direction{color:var(--green)}.sell .direction{color:var(--red)}
+.periods{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.period{background:#152337;border-radius:8px;padding:8px;text-align:center;font-size:12px}
+.up{color:var(--green);font-weight:800}.down{color:var(--red);font-weight:800}.flat{color:var(--gold);font-weight:800}
+#status{font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px}
+footer{text-align:center;color:#71849b;font-size:11px;padding:20px 8px}
+@media(min-width:600px){.pairs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style></head>
+<body>
+<header><div class="logo">SINAL <span>FM</span></div><div class="pill">SCANNER D + H1 + M5</div></header>
+<main>
+<div class="notice"><b>Protótipo de análise — não é sinal garantido.</b> O scanner busca candles em uma fonte pública independente da Exness. Só lista pares quando a direção calculada coincide em D, H1 e M5. Compare sempre o preço e o spread no MT5 antes de decidir.</div>
+<section class="card">
+ <h2>Escolha os pares</h2>
+ <div class="small">Marque os ativos que deseja verificar.</div>
+ <div class="pairs" id="pairs">
+  <label class="pair"><input type="checkbox" value="AUDNZD" checked>AUD/NZD</label>
+  <label class="pair"><input type="checkbox" value="EURUSD" checked>EUR/USD</label>
+  <label class="pair"><input type="checkbox" value="GBPUSD" checked>GBP/USD</label>
+  <label class="pair"><input type="checkbox" value="USDJPY" checked>USD/JPY</label>
+  <label class="pair"><input type="checkbox" value="USDCAD" checked>USD/CAD</label>
+  <label class="pair"><input type="checkbox" value="EURGBP" checked>EUR/GBP</label>
+  <label class="pair"><input type="checkbox" value="AUDUSD" checked>AUD/USD</label>
+  <label class="pair"><input type="checkbox" value="NZDUSD" checked>NZD/USD</label>
+ </div>
+ <div class="summary">
+  <div class="tile"><span class="small">COMPRA</span><b id="buys" class="up">0</b></div>
+  <div class="tile"><span class="small">VENDA</span><b id="sells" class="down">0</b></div>
+  <div class="tile"><span class="small">ALINHADOS</span><b id="total">0</b></div>
+ </div>
+ <button class="primary" id="scan">Analisar pares agora</button>
+ <div id="status">Pronto para iniciar a análise.</div>
+</section>
+<section class="card">
+ <div class="row"><h2 style="margin:0">Pares alinhados</h2><span class="pill">D + H1 + M5</span></div>
+ <p class="small">Somente tendências coincidentes aparecem abaixo. Pares divergentes ou sem dados ficam ocultos.</p>
+ <div id="results" class="results"><div class="small">Nenhuma análise realizada ainda.</div></div>
+</section>
+<section class="card">
+ <h2>Regra do filtro</h2>
+ <p class="small">Em cada período: EMA 9 acima da EMA 21 = alta; EMA 9 abaixo da EMA 21 = baixa. O RSI 14 precisa confirmar: acima de 50 para alta e abaixo de 50 para baixa. Se D, H1 e M5 não concordarem, o par não aparece.</p>
+ <p class="small">A direção é uma classificação técnica simplificada. Este protótipo não calcula lote, não envia ordens e não gera notificações em segundo plano.</p>
+</section>
+<footer>SINAL FM • Protótipo de scanner • Dados de terceiros, não cotação oficial da Exness.</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const configs=[{key:'1d',label:'D'},{key:'1h',label:'H1'},{key:'5m',label:'M5'}];
+const names={AUDNZD:'AUD/NZD',EURUSD:'EUR/USD',GBPUSD:'GBP/USD',USDJPY:'USD/JPY',USDCAD:'USD/CAD',EURGBP:'EUR/GBP',AUDUSD:'AUD/USD',NZDUSD:'NZD/USD'};
+function ema(vals,p){let k=2/(p+1),v=vals[0];for(let i=1;i<vals.length;i++)v=vals[i]*k+v*(1-k);return v}
+function calcRsi(vals,p=14){let g=0,l=0;for(let i=vals.length-p;i<vals.length;i++){let d=vals[i]-vals[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;return 100-100/(1+(g/p)/(l/p))}
+function classify(bars){
+ const closes=bars.map(x=>Number(x.close)).filter(Number.isFinite);
+ if(closes.length<35)throw Error('candles insuficientes');
+ const fast=ema(closes.slice(-60),9),slow=ema(closes.slice(-100),21),rsi=calcRsi(closes);
+ if(fast>slow&&rsi>50)return {dir:'up',label:'ALTA',rsi,fast,slow};
+ if(fast<slow&&rsi<50)return {dir:'down',label:'BAIXA',rsi,fast,slow};
+ return {dir:'flat',label:'LATERAL',rsi,fast,slow};
+}
+async function getCandles(symbol,interval){
+ const url=`https://biquote.io/api/${symbol}/ohlc?interval=${interval}&limit=120`;
+ const response=await fetch(url,{cache:'no-store'});
+ if(!response.ok)throw Error('HTTP '+response.status);
+ const json=await response.json();
+ if(!Array.isArray(json.bars))throw Error(json.message||'resposta sem candles');
+ // API returns newest-first; reverse to chronological order.
+ return json.bars.filter(b=>!b.isOpen).reverse();
+}
+async function scan(){
+ const btn=$('scan');btn.disabled=true;btn.textContent='Analisando...';
+ $('results').innerHTML='';$('buys').textContent='0';$('sells').textContent='0';$('total').textContent='0';
+ const symbols=[...document.querySelectorAll('#pairs input:checked')].map(x=>x.value);
+ if(!symbols.length){$('status').textContent='Selecione pelo menos um par.';btn.disabled=false;btn.textContent='Analisar pares agora';return}
+ let found=[],errors=[];
+ for(const symbol of symbols){
+  $('status').textContent=`Analisando ${names[symbol]} — Diário, H1 e M5...`;
+  try{
+   const values=await Promise.all(configs.map(async c=>({label:c.label,result:classify(await getCandles(symbol,c.key))})));
+   const direction=values[0].result.dir;
+   if(direction!=='flat'&&values.every(v=>v.result.dir===direction)){
+    found.push({symbol,direction,values});
+   }
+  }catch(e){errors.push(`${names[symbol]}: ${e.message}`)}
+ }
+ let buys=found.filter(x=>x.direction==='up').length,sells=found.filter(x=>x.direction==='down').length;
+ $('buys').textContent=buys;$('sells').textContent=sells;$('total').textContent=found.length;
+ if(!found.length)$('results').innerHTML='<div class="small">Nenhum par apresentou a mesma tendência nos três períodos nesta consulta.</div>';
+ for(const item of found){
+  const cls=item.direction==='up'?'buy':'sell',word=item.direction==='up'?'COMPRA':'VENDA';
+  const el=document.createElement('div');el.className='result '+cls;
+  const title=document.createElement('div');title.className='row';
+  const nm=document.createElement('b');nm.textContent=names[item.symbol];
+  const dir=document.createElement('span');dir.className='direction';dir.textContent=word;
+  title.append(nm,dir);el.append(title);
+  const periods=document.createElement('div');periods.className='periods';
+  item.values.forEach(v=>{const p=document.createElement('div');p.className='period';const trend=document.createElement('span');trend.className=v.result.dir==='up'?'up':'down';trend.textContent=v.result.label;p.textContent=v.label+' ';p.append(trend);const r=document.createElement('div');r.className='small';r.textContent='RSI '+v.result.rsi.toFixed(1);p.append(r);periods.append(p)});
+  el.append(periods);$('results').append(el);
+ }
+ $('status').textContent=`Consulta concluída: ${symbols.length} pares verificados. ${found.length} alinhados.`+(errors.length?' Alguns ativos não responderam: '+errors.join('; '):'');
+ btn.disabled=false;btn.textContent='Analisar pares novamente';
+}
+$('scan').addEventListener('click',scan);
+</script></body></html>
